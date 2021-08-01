@@ -6,7 +6,6 @@
 import datetime
 import logging
 import os
-from faker import Faker
 
 from flask import Flask, render_template, request, Response
 import sqlalchemy
@@ -139,57 +138,3 @@ def calcDays(dateToCheck):
         return daysLeft
     return OK
 
-
-def testDateLogic():
-    """
-    generate & check some fake dates to confirm that calcDays() works as intended
-    :return: OK
-    """
-    for z in range(10):
-        thisDate = Faker().date()
-        #print(thisDate, type(thisDate))
-        dateRange = calcDays(thisDate)
-        print("Days until %s: %s" % (str(thisDate), str(dateRange)))
-        # TODO: fix the wording / output of the above, if leaving it in at all
-    return OK
-
-
-def makeFakeData(numRecords=20):
-    """
-    generate specified number of fake datasets
-    :param numRecords: number of datasets to generate
-    :return: list of tuples
-    """
-    myData = []
-    for z in range(numRecords):
-        fakeName = Faker().name()
-        fakeBirthdate = Faker().date()
-        fakeUser = fakeName.split()[0].lower() + fakeName.split()[1].lower()
-        thisRecord = (fakeUser, fakeBirthdate)
-        myData.append(thisRecord)
-    return myData
-
-
-def initData():
-    """
-    initialise DB connection, DB tables, and insert some dummy data
-    :return: OK or ERR
-    """
-    dbConn = initDbConnection()
-    createDbTables(dbConn)
-    dummyData = makeFakeData(50)
-    for z in range(50):
-        dbWrite(dbConn, dummyData[z])
-    return OK
-
-## API endpoints to add:
-#
-#   /status     show DB connection status, number of records, instance uptime and similar stats
-#   /selftest   generate record with birthday today, insert into DB and redirect to birthday check URL with
-#                   generated username as parameter to demonstrate successful birthday check
-
-## TO DO:
-#
-# place tests (initData, makeFakeData and so on) in separate tests.py
-# use assert and unit test framework where possible - frame individual tests as unit tests with known results,
-#   and assert against those?
