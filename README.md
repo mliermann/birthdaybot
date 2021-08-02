@@ -50,3 +50,13 @@ required to support both cloud platforms).
 * Write configuration scripts for building and no-downtime production deployment of
 this application, keeping in mind aspects that an SRE would have to consider.
 ---
+
+# To Do MSL:
+
+* GCloud Run YAML definition
+* GCloud SQL setup doc
+* test GCloud deploy
+* container build instructions to GCR
+* architecture diagram
+* also mention differences if deploying to GKE
+* swap in gUnicorn instead of Flask?
