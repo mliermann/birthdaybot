@@ -1,3 +1,17 @@
+#!/usr/bin/python
+
+import datetime
+import logging
+import os
+from faker import Faker
+
+from flask import Flask, render_template, request, Response
+import sqlalchemy
+
+OK = "OK"
+ERR = "ERR"
+ERR_NOT_FOUND = "404"
+
 def testDateLogic():
     """
     generate & check some fake dates to confirm that calcDays() works as intended

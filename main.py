@@ -187,6 +187,8 @@ def initData():
 #   /status     show DB connection status, number of records, instance uptime and similar stats
 #   /selftest   generate record with birthday today, insert into DB and redirect to birthday check URL with
 #                   generated username as parameter to demonstrate successful birthday check
+#   /help       list all API endpoints as per https://stackoverflow.com/questions/17249953/list-all-available-routes-in-flask-along-with-corresponding-functions-docstrin
+#               (maybe?)
 
 ## TO DO:
 #

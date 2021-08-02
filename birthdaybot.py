@@ -7,15 +7,17 @@ import datetime
 import logging
 import os
 
-from flask import Flask, render_template, request, Response
+from flask import Flask, render_template, request, Response, jsonify
 import sqlalchemy
 
 OK = "OK"
 ERR = "ERR"
 ERR_NOT_FOUND = "404"
 
+# define global app context
 app = Flask(__name__)
 
+# set up global logger
 logger = logging.getLogger()
 
 
@@ -52,15 +54,19 @@ def initDbConnection():
         return ERR
     return dbConn
 
+# create global DB handle
+db = initDbConnection()
 
-def createDbTables(dbHandle):
+
+@app.before_first_request
+def createDbTables():
     """
     create required database table if it does not already exist
     :param dbHandle: DB connection object
     :return: OK or ERR
     """
     try:
-        with dbHandle.connect() as conn:
+        with db.connect() as conn:
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS birthdays "
                 "( username VARCHAR(255) NOT NULL, birthday DATE NOT NULL, "
@@ -72,7 +78,7 @@ def createDbTables(dbHandle):
         return ERR
 
 
-def dbWrite(dbHandle, dbData):
+def dbWrite(dbData):
     """
     write data to DB
     :param dbHandle: DB connection object
@@ -81,10 +87,11 @@ def dbWrite(dbHandle, dbData):
     """
     insUser = dbData[0]
     insDate = dbData[1]
+    print(insUser, insDate)
     sqlStmt = sqlalchemy.text("INSERT INTO birthdays (username, birthday)" "VALUES (:insUser, :insDate)"
                               "ON DUPLICATE KEY UPDATE username = VALUES(username), birthday = VALUES(birthday)")
     try:
-        with dbHandle.connect() as conn:
+        with db.connect() as conn:
             conn.execute(sqlStmt, insUser=insUser, insDate=insDate)
     except Exception as e:
         logger.exception(e)
@@ -93,7 +100,7 @@ def dbWrite(dbHandle, dbData):
     return OK
 
 
-def dbQuery(dbHandle, username):
+def dbQuery(username):
     """
     query DB for birthday information for specified username
     :param dbHandle: DB connection object
@@ -102,12 +109,12 @@ def dbQuery(dbHandle, username):
     """
     sqlStmt = sqlalchemy.text("SELECT birthday FROM birthdays WHERE username = :username")
     try:
-        with dbHandle.connect() as conn:
+        with db.connect() as conn:
             res = conn.execute(sqlStmt, username=username)
             # we use fetchone() below because we will only ever have one result
             rescount = res.rowcount
             if int(rescount) > 0:
-                return res.fetchone()
+                return res.fetchone()["birthday"]
             else:
                 return ERR_NOT_FOUND
     except Exception as e:
@@ -124,8 +131,14 @@ def calcDays(dateToCheck):
     :return: integer
     """
     today = datetime.date.today()
-    origBirthday = datetime.date.fromisoformat(dateToCheck)
+    # guard against *somehow* receiving an incorrect data type
+    if type(dateToCheck) is not datetime.date:
+        origBirthday = datetime.date.fromisoformat(str(dateToCheck))
+    else:
+        origBirthday = dateToCheck
+    # determine the next birthday for this date of birth
     nextBirthday = datetime.date(today.year, origBirthday.month, origBirthday.day)
+    # calculate days to next birthday
     if today<nextBirthday:
         daysLeft = (nextBirthday - today).days
         return daysLeft
@@ -136,5 +149,73 @@ def calcDays(dateToCheck):
         newDate = datetime.date(nextBirthday.year + 1, nextBirthday.month, nextBirthday.day)
         daysLeft = (newDate - today).days
         return daysLeft
-    return OK
 
+
+@app.route("/hello/<username>", methods=["PUT"])
+def addUser(username):
+    """
+    add user data to database if it passes checks
+    :param username: user name supplied as part of request URL
+    :return: 204 No Content response, or an error
+    """
+    if not str(username).isalpha():
+        logger.info("rejecting user name %s: incorrect format" % username)
+        return "Parameter 'username' must be alphabetic characters only", 400
+    if request.json:
+        req=request.get_json()
+    elif request.args:
+        req = request.args
+    else:
+        req=request.form
+    # now we have request data, regardless of whether we received it as JSON, as form data, or appended to the URL
+    userDob = req["dateOfBirth"]
+    # validate the supplied date of birth - step 1: is it a proper ISO format date?
+    try:
+        thisDob = datetime.datetime.strptime(userDob, "%Y-%m-%d")
+        thisDob = thisDob.date()
+    except Exception as e:
+        logger.info("rejecting birth date %s: incorrect format" % userDob)
+        return "Data supplied is not valid date", 400
+    # next, check that supplied date of birth is before today's date
+    today = datetime.date.today()
+    if thisDob > today:
+        logger.info("rejecting birth date %s: it is in the future" % thisDob)
+        return "Date supplied is in the future, thus not a valid date", 400
+    # assemble data & send to dbWrite function - ensure user name is all lowercase when stored
+    userData = [str(username).lower(), thisDob]
+    writeRes = dbWrite(userData)
+    if writeRes == OK:
+        return "No Content", 204
+    else:
+        return "error writing to database", 500
+
+
+@app.route("/hello/<username>", methods=["GET"])
+def checkUser(username):
+    """
+    retrieve date of birth for specified user and check if birthday
+    :param username: user name supplied as part of request URL
+    :return: 200 OK plus a message
+    """
+    if not str(username).isalpha():
+        logger.info("rejecting user name %s: incorrect format" % username)
+        return "Parameter 'username' must be alphabetic characters only", 400
+    # convert user name to lower case before DB query
+    thisUser = str(username).lower()
+    userBday = dbQuery(thisUser)
+    if userBday == ERR_NOT_FOUND:
+        logging.info("no birth date found in DB for user %s" % username)
+        return "no birth date found in DB for user %s" % username, 400
+    # now we have a date of birth for this user - let's check when the birthday is
+    daysLeft = calcDays(userBday)
+    # construct reponse JSON object
+    if daysLeft == 0:
+        resp = {"message": "Hello, %s! Happy birthday!" % username}
+    else:
+        resp = {"message": "Hello, %s! Your birthday is in %s day(s)" % (username, daysLeft)}
+    # return JSON response and 200 HTTP status
+    return jsonify(resp), 200
+
+
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=18080, debug=True)
