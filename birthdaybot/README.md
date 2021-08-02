@@ -16,7 +16,7 @@ Faker is a library to generate realistic dummy data - more info at https://faker
 ## Usage
 Run the script with `python birthdaybot.py` or `./birthdaybot.py` if you have made it executable.
 
-The program uses the following environment variables:
+The program uses and absolutely requires the following environment variables:
 * `BDB_DB_USER`: user name for MySQL connection
 * `BDB_DB_PASS`: password for the above user
 * `BDB_DB_NAME`: name of database to use - must be one the specified user has read/write permissions on
@@ -25,6 +25,10 @@ The program uses the following environment variables:
 
 No default values are assumed for the above if they are not supplied. Note that the program **will not work** if these
 environment variables are not set using the `export` command or a similar mechanism.
+
+Optionally, you can define and set `BDB_LOGLEVEL` to one of the supported values to fine-tune the amount of information
+this program logs. Permitted values are `DEBUG`, `INFO`, `WARNING`, `ERROR` and `CRITICAL`. If not set, the program
+uses `WARNING` as a default.
 
 ## Functionality
 The program exposes API endpoints as follows:
@@ -41,3 +45,7 @@ message either wishing the user a happy birthday, or giving the days to the user
 * no protection is in place to prevent data from being overwritten - this is by design, as this behaviour was
 requested in the spec
 * user names must be alphabet characters *only*
+* it might be desirable to implement a `status` endpoint to deliver program metrics e.g. uptime, requests served, total
+records in database, and the like - currently no metrics are emitted, so monitoring this program will be limited to
+basic availability checks and log parsing
+* all log output is to console

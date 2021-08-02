@@ -18,8 +18,24 @@ ERR_NOT_FOUND = "404"
 # define global app context
 app = Flask(__name__)
 
-# set up global logger
-logging.basicConfig(level=logging.DEBUG)
+### set up global logger
+# first see if we have an env var set to define log level
+try:
+    bb_loglevel = os.environ["BDB_LOGLEVEL"]
+except Exception as e:
+    bb_loglevel = "WARNING"
+# set log level based on environment variable, or use default of WARNING
+if bb_loglevel == "DEBUG":
+    logging.basicConfig(level=logging.DEBUG)
+elif bb_loglevel == "INFO":
+    logging.basicConfig(level=logging.INFO)
+elif bb_loglevel == "WARNING":
+    logging.basicConfig(level=logging.WARNING)
+elif bb_loglevel == "ERROR":
+    logging.basicConfig(level=logging.ERROR)
+elif bb_loglevel == "CRITICAL":
+    logging.basicConfig(level=logging.CRITICAL)
+
 logger = logging.getLogger()
 
 
