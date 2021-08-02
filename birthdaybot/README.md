@@ -31,7 +31,7 @@ this program logs. Permitted values are `DEBUG`, `INFO`, `WARNING`, `ERROR` and 
 uses `WARNING` as a default.
 
 ## Functionality
-The program exposes API endpoints as follows:
+The program exposes API endpoints (on the standard Flask port 8080) as follows:
 * `PUT /hello/<username>`: accepts a request with body `{ "dateOfBirth": "YYYY-MM-DD" }`. Inserts or updates this data
 in the database. Request body can be supplied either as a JSON document, as form data, or as query parameters appended
 to the URL - the endpoint can process all three. Dates in the future are rejected with an appropriate message and a

@@ -266,4 +266,4 @@ def checkUser(username):
 
 if __name__ == "__main__":
     logger.info("starting Flask app")
-    app.run(host="127.0.0.1", port=18080, debug=True)
+    app.run(host="127.0.0.1", port=8080, debug=False)
