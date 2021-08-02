@@ -6,8 +6,9 @@
 import datetime
 import logging
 import os
+import sys
 
-from flask import Flask, render_template, request, Response, jsonify
+from flask import Flask, request, jsonify
 import sqlalchemy
 
 OK = "OK"
@@ -18,6 +19,7 @@ ERR_NOT_FOUND = "404"
 app = Flask(__name__)
 
 # set up global logger
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 
@@ -26,17 +28,24 @@ def initDbConnection():
     initialiase DB connection based on environment variables
     :return: DB connection object, or error
     """
-    db_user = os.environ["BDB_DB_USER"]
-    db_pass = os.environ["BDB_DB_PASS"]
-    db_name = os.environ["BDB_DB_NAME"]
-    db_host = os.environ["BDB_DB_HOST"]
-    db_port = os.environ["BDB_DB_PORT"]
+    try:
+        db_user = os.environ["BDB_DB_USER"]
+        db_pass = os.environ["BDB_DB_PASS"]
+        db_name = os.environ["BDB_DB_NAME"]
+        db_host = os.environ["BDB_DB_HOST"]
+        db_port = os.environ["BDB_DB_PORT"]
+    except Exception as e:
+        logger.critical("could not parse environment for DB connection parameters")
+        return ERR
     db_config = {
         "pool_size": 5,
         "max_overflow": 2,
         "pool_timeout": 30,
         "pool_recycle": 1800
     }
+    logger.info("attempting MySQL connection to %s:%s" % (db_host, db_port))
+    logger.debug("connection parameters: DB name %s, DB user %s" % (db_name, db_user))
+    logger.debug("connection config: %s" % db_config)
     try:
         dbConn = sqlalchemy.create_engine(
             sqlalchemy.engine.url.URL.create(
@@ -50,12 +59,17 @@ def initDbConnection():
             **db_config
         )
     except Exception as e:
-        logger.critical("Could not connect to DB - %s" % e)
+        logger.critical("could not connect to DB - %s" % e)
         return ERR
+    logger.info("connection established to MySQL server at %s:%s" % (db_host, db_port))
     return dbConn
 
-# create global DB handle
+
+# create global DB handle here so that it is available throughout
 db = initDbConnection()
+if db == ERR:
+    logger.critical("unable to establish DB connection - aborting")
+    sys.exit(1)
 
 
 @app.before_first_request
@@ -65,6 +79,7 @@ def createDbTables():
     :param dbHandle: DB connection object
     :return: OK or ERR
     """
+    logger.info("creating required DB table if it does not already exist")
     try:
         with db.connect() as conn:
             conn.execute(
@@ -97,6 +112,7 @@ def dbWrite(dbData):
         logger.exception(e)
         # add Flask Response and 500 HTTP status here
         return ERR
+    logger.debug("successfully wrote dataset %s, %s to database" % (insUser, insDate))
     return OK
 
 
@@ -107,21 +123,25 @@ def dbQuery(username):
     :param username: value to query DB for
     :return: birthdate as YYYY-MM-DD format string, or ERR_NOT_FOUND
     """
+    logger.debug("querying database for birth date for user %s" % username)
     sqlStmt = sqlalchemy.text("SELECT birthday FROM birthdays WHERE username = :username")
     try:
         with db.connect() as conn:
             res = conn.execute(sqlStmt, username=username)
             # we use fetchone() below because we will only ever have one result
-            rescount = res.rowcount
-            if int(rescount) > 0:
+            #rescount = res.rowcount
+            if int(res.rowcount) > 0:
+                logger.debug("retrieved birth date for user %s" % username)
                 return res.fetchone()["birthday"]
             else:
+                logger.debug("no birth date found for user %s" % username)
                 return ERR_NOT_FOUND
     except Exception as e:
+        # note we should not see this exception unless the database went away mid-query
         logger.exception(e)
+        logger.info("DB query failed for unexpected reasons")
         # add Flask Response and 500 HTTP status here
         return ERR
-    return OK
 
 
 def calcDays(dateToCheck):
@@ -158,9 +178,11 @@ def addUser(username):
     :param username: user name supplied as part of request URL
     :return: 204 No Content response, or an error
     """
+    logger.debug("attempting to add user %s to database" % username)
     if not str(username).isalpha():
         logger.info("rejecting user name %s: incorrect format" % username)
         return "Parameter 'username' must be alphabetic characters only", 400
+    logger.debug("supplied user name passes validity check")
     if request.json:
         req=request.get_json()
     elif request.args:
@@ -169,6 +191,7 @@ def addUser(username):
         req=request.form
     # now we have request data, regardless of whether we received it as JSON, as form data, or appended to the URL
     userDob = req["dateOfBirth"]
+    logger.debug("date of birth supplied is %s" % userDob)
     # validate the supplied date of birth - step 1: is it a proper ISO format date?
     try:
         thisDob = datetime.datetime.strptime(userDob, "%Y-%m-%d")
@@ -181,8 +204,10 @@ def addUser(username):
     if thisDob > today:
         logger.info("rejecting birth date %s: it is in the future" % thisDob)
         return "Date supplied is in the future, thus not a valid date", 400
+    logger.debug("birth date supplied has passed validity checks")
     # assemble data & send to dbWrite function - ensure user name is all lowercase when stored
     userData = [str(username).lower(), thisDob]
+    logger.debug("writing dataset %s, %s to database" % (userData[0], userData[1]))
     writeRes = dbWrite(userData)
     if writeRes == OK:
         return "No Content", 204
@@ -204,12 +229,13 @@ def checkUser(username):
     thisUser = str(username).lower()
     userBday = dbQuery(thisUser)
     if userBday == ERR_NOT_FOUND:
-        logging.info("no birth date found in DB for user %s" % username)
+        logger.info("no birth date found in DB for user %s" % username)
         return "no birth date found in DB for user %s" % username, 400
     # now we have a date of birth for this user - let's check when the birthday is
     daysLeft = calcDays(userBday)
     # construct reponse JSON object
     if daysLeft == 0:
+        logger.info("wished %s a happy birthday" % username)
         resp = {"message": "Hello, %s! Happy birthday!" % username}
     else:
         resp = {"message": "Hello, %s! Your birthday is in %s day(s)" % (username, daysLeft)}
@@ -218,4 +244,5 @@ def checkUser(username):
 
 
 if __name__ == "__main__":
+    logger.info("starting Flask app")
     app.run(host="127.0.0.1", port=18080, debug=True)
