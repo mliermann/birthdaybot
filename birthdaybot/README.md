@@ -40,12 +40,16 @@ to the URL - the endpoint can process all three. Dates in the future are rejecte
 status code and error message if the user is not found in the database, otherwise returns a 200 OK response and a
 message either wishing the user a happy birthday, or giving the days to the user's next birthday
 
+Excess data sent as part of a request - anything beyond the `dateOfBirth` parameter - is cheerfully ignored.
+
 ## Limitations, concerns, possible improvements
-* all user names are converted to lowercase before being inserted into the database
+* all user names are converted to lowercase before being inserted into the database - this behaviour might not be
+desired if further uses for this data (beyond that by this app) are planned
 * no protection is in place to prevent data from being overwritten - this is by design, as this behaviour was
 requested in the spec
-* user names must be alphabet characters *only*
 * it might be desirable to implement a `status` endpoint to deliver program metrics e.g. uptime, requests served, total
 records in database, and the like - currently no metrics are emitted, so monitoring this program will be limited to
 basic availability checks and log parsing
 * all log output is to console
+* we might want to return an informational message if excess data is sent to the `PUT` endpoint, as a quality-of-life
+measure for API users

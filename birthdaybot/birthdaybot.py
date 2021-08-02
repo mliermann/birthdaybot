@@ -206,7 +206,12 @@ def addUser(username):
     else:
         req=request.form
     # now we have request data, regardless of whether we received it as JSON, as form data, or appended to the URL
-    userDob = req["dateOfBirth"]
+    # extract the data field we need, return an error if it's not there
+    try:
+        userDob = req["dateOfBirth"]
+    except Exception as e:
+        logger.error(e)
+        return "invalid data", 400
     logger.debug("date of birth supplied is %s" % userDob)
     # validate the supplied date of birth - step 1: is it a proper ISO format date?
     try:
