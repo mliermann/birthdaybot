@@ -1,0 +1,5 @@
+cryptography==2.8
+Faker==8.0.0
+Flask==1.1.1
+PyMySQL==1.0.2
+SQLAlchemy==1.4.22

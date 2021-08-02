@@ -8,10 +8,14 @@ greeting when appropriate.
 * Python 3
 * Flask (`pip install flask`)
 * SQLAlchemy (`pip install sqlalchemy`)
+* PyMySQL (`pip install pymysql`)
+* Cryptography (`pip install cryptography`)
 
 The test scripts in `tests.py` additionally require the Faker library (`pip install faker`).
 
 Faker is a library to generate realistic dummy data - more info at https://faker.readthedocs.io/en/master/
+
+For convenience, there is a `requirements.txt` file (do `pip install -r requirements.txt`)
 
 ## Usage
 Run the script with `python birthdaybot.py` or `./birthdaybot.py` if you have made it executable.
