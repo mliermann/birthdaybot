@@ -51,6 +51,8 @@ Excess data sent as part of a request - anything beyond the `dateOfBirth` parame
 desired if further uses for this data (beyond that by this app) are planned
 * no protection is in place to prevent data from being overwritten - this is by design, as this behaviour was
 requested in the spec
+* for actual production use, we should add the gUnicorn server to the image and have it run the app, rather than use
+Flask's WSGI server capability
 * it might be desirable to implement a `status` endpoint to deliver program metrics e.g. uptime, requests served, total
 records in database, and the like - currently no metrics are emitted, so monitoring this program will be limited to
 basic availability checks and log parsing
