@@ -1,0 +1,33 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+  name: birthdaybot
+spec:
+  template:
+    spec:
+      containerConcurrency: 80
+      containers:
+      - env:
+        - name: BDB_DB_USER
+          value: birthdaybot
+        - name: BDB_DB_PASS
+          value: birthdaybot
+        - name: BDB_DB_NAME
+          value: birthdaybot
+        - name: BDB_DB_HOST
+          value: 10.95.192.3
+        - name: BDB_DB_PORT
+          value: '3306'
+        image: gcr.io/birthdaybot-322215/birthdaybot
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+      serviceAccountName: 469782169564-compute@developer.gserviceaccount.com
+      timeoutSeconds: 300
+  traffic:
+  - latestRevision: true
+    percent: 100

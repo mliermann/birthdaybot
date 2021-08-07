@@ -54,11 +54,5 @@ this application, keeping in mind aspects that an SRE would have to consider.
 # To Do MSL:
 
 * complete unit tests in birthdaybot/tests.py
-* GCloud Run YAML definition
-* GCloud SQL setup doc
-* set up test GCloud env
-* test GCloud deploy - https://codelabs.developers.google.com/codelabs/cloud-run-deploy
-* container build instructions to GCR
 * architecture diagram
-* also mention differences if deploying to GKE
 * swap in gUnicorn instead of Flask?
