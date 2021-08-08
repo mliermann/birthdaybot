@@ -50,9 +50,3 @@ required to support both cloud platforms).
 * Write configuration scripts for building and no-downtime production deployment of
 this application, keeping in mind aspects that an SRE would have to consider.
 ---
-
-# To Do MSL:
-
-* complete unit tests in birthdaybot/tests.py
-* architecture diagram
-* swap in gUnicorn instead of Flask?
